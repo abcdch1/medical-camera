@@ -11,9 +11,16 @@ Flexible and useful UVC camera engine for Android. Easily open your UVC camera (
 
 This is the **actively maintained, canonical fork** of the original AndroidUSBCamera project. It upgraded to latest Android SDK, Gradle and NDK, fixed permission issues and improved reliability. Stars, forks, issues, and PRs are welcome!
 
-- **Latest Release**: (includes AUSBC APK demo) – [Download here](https://github.com/ernestp/AndroidUSBCamera/releases/latest)
+- **Latest Release**: (includes AUSBC APK demo) – [Download here](https://github.com/phunb/android-usb-camera-2/releases)
 - **API Support**: 23+
 - **License**: Apache 2.0
+
+## Download APK (CI)
+
+Mỗi khi push code lên branch `main`, GitHub Actions sẽ tự build file APK:
+
+1. **Releases** – [github.com/phunb/android-usb-camera-2/releases](https://github.com/phunb/android-usb-camera-2/releases) (mỗi build tạo một pre-release, tải APK trực tiếp)
+2. **Actions** – tab Actions → chọn workflow run → phần **Artifacts** → `ausbc-release-apk`
 
 ## 🚀 Project Status (Updated March 2026)
 This repo is **actively developed and maintained** by @ernestp and contributors.
