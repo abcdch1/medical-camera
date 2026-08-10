@@ -1,0 +1,17 @@
+*.iml
+.gradle
+/local.properties
+/.idea/workspace.xml
+/.idea/libraries
+.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.tags*
+.cxx/
+libuvccommon/build
+libuvc/src/main/libs
+.vscode/settings.json
+app/release/
+.history/

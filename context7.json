@@ -1,0 +1,16 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Android USB Camera",
+  "description": "Flexible and useful UVC camera engine on Android platform, supporting multi-road cameras!",
+  "folders": [],
+  "excludeFolders": [
+    "libuvc/src/main/jni/libjpeg-turbo-1.5.0",
+    "libuvc/src/main/jni/libusb",
+    "libuvc/src/main/jni/libuvc",
+    "libuvc/src/main/jni/rapidjson",
+    "libuvc/src/main/jni/UVCCamera"
+  ],
+  "excludeFiles": [],
+  "rules": [],
+  "previousVersions": []
+}
