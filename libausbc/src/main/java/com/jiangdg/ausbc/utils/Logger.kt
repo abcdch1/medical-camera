@@ -57,4 +57,8 @@ object Logger {
     fun e(flag: String, msg: String, throwable: Throwable?) {
         XLogWrapper.e(flag, msg, throwable)
     }
+
+    fun getAllLogs(): String = XLogWrapper.getAllLogs()
+
+    fun clearLogs() = XLogWrapper.clearLogs()
 }

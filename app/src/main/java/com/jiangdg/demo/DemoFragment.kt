@@ -20,8 +20,9 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
-import android.content.Intent
-import android.content.pm.PackageManager
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Typeface
 import android.hardware.usb.UsbDevice
@@ -63,6 +64,7 @@ import com.jiangdg.ausbc.widget.*
 import com.jiangdg.demo.EffectListDialog.Companion.KEY_ANIMATION
 import com.jiangdg.demo.EffectListDialog.Companion.KEY_FILTER
 import com.jiangdg.demo.databinding.DialogMoreBinding
+import com.jiangdg.demo.databinding.DialogLogViewerBinding
 import com.jiangdg.utils.MMKVUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -155,6 +157,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         mViewBinding.lensFacingBtn1.setOnClickListener(this)
         mViewBinding.effectsBtn.setOnClickListener(this)
         mViewBinding.cameraTypeBtn.setOnClickListener(this)
+        mViewBinding.logBtn.setOnClickListener(this)
         mViewBinding.settingsBtn.setOnClickListener(this)
         mViewBinding.voiceBtn.setOnClickListener(this)
         mViewBinding.resolutionBtn.setOnClickListener(this)
@@ -470,6 +473,9 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
                     mViewBinding.settingsBtn -> {
                         showMoreMenu()
                     }
+                    mViewBinding.logBtn -> {
+                        showLogDialog()
+                    }
                     mViewBinding.voiceBtn -> {
                         playMic()
                     }
@@ -777,6 +783,29 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         animatorSet.addListener(listener)
         animatorSet.playTogether(scaleXAnim, scaleYAnim, alphaAnim)
         animatorSet.start()
+    }
+
+    private fun showLogDialog() {
+        mMoreMenu?.dismiss()
+        val binding = DialogLogViewerBinding.inflate(layoutInflater)
+        val logs = Logger.getAllLogs().ifEmpty { getString(R.string.dialog_log_empty) }
+        binding.logContentTv.text = logs
+        binding.logScrollView.post {
+            binding.logScrollView.fullScroll(View.FOCUS_DOWN)
+        }
+        MaterialDialog(requireContext()).show {
+            title(R.string.dialog_log_title)
+            customView(view = binding.root, scrollable = false, noVerticalPadding = true)
+            positiveButton(R.string.dialog_log_copy) {
+                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("AUSBC logs", logs))
+                ToastUtils.show(getString(R.string.dialog_log_copied))
+            }
+            negativeButton(R.string.dialog_log_clear) {
+                Logger.clearLogs()
+                ToastUtils.show("Logs cleared")
+            }
+        }
     }
 
     private fun showMoreMenu() {
