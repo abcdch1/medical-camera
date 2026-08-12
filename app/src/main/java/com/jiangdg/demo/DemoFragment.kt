@@ -23,6 +23,8 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Typeface
 import android.hardware.usb.UsbDevice
@@ -42,6 +44,7 @@ import androidx.core.view.children
 import androidx.core.widget.TextViewCompat
 import androidx.lifecycle.lifecycleScope
 import com.afollestad.materialdialogs.MaterialDialog
+import com.afollestad.materialdialogs.customview.customView
 import com.afollestad.materialdialogs.list.listItemsSingleChoice
 import com.jiangdg.ausbc.MultiCameraClient
 import com.jiangdg.ausbc.base.BaseBottomDialog
