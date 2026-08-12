@@ -559,9 +559,16 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
     @SuppressLint("CheckResult")
     private fun showResolutionDialog() {
         mMoreMenu?.dismiss()
+        val camera = getCurrentCamera() as? CameraUVC
+        if (camera == null || !camera.isCameraOpened()) {
+            Logger.w(TAG, "showResolutionDialog: camera not opened")
+            ToastUtils.show("Camera not opened yet")
+            return
+        }
         getAllPreviewSizes().let { previewSizes ->
             if (previewSizes.isNullOrEmpty()) {
-                ToastUtils.show("Get camera preview size failed")
+                Logger.e(TAG, "Get camera preview size failed, camera opened but size list empty")
+                ToastUtils.show("Get camera preview size failed. See logcat (CameraUVC)")
                 return
             }
             val list = arrayListOf<String>()

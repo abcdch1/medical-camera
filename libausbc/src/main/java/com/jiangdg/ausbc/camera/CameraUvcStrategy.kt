@@ -343,24 +343,26 @@ class CameraUvcStrategy(ctx: Context) : ICameraStrategy(ctx) {
                 request.cameraId == it.cameraId
             }
             val previewSizeList = cameraInfo?.cameraPreviewSizes ?: mutableListOf()
-            if (previewSizeList.isEmpty()) {
-                Logger.i(TAG, "getAllPreviewSizes = ${mUVCCamera?.supportedSizeList}")
-                if (mUVCCamera?.supportedSizeList?.isNotEmpty() == true) {
-                    mUVCCamera?.supportedSizeList
-                } else {
-                    mUVCCamera?.getSupportedSizeList(UVCCamera.FRAME_FORMAT_YUYV)
-                }.also { sizeList ->
-                    sizeList?.forEach { size ->
-                        previewSizeList.find {
-                            it.width == size.width && it.height == size.height
-                        }.also {
-                            if (it == null) {
-                                previewSizeList.add(PreviewSize(size.width, size.height))
-                            }
-                        }
-                    }
-                    cameraInfo?.cameraPreviewSizes = previewSizeList
+            if (previewSizeList.isEmpty() && mUVCCamera != null) {
+                val rawSupportedSize = mUVCCamera?.supportedSize
+                Logger.i(TAG, "getAllPreviewSizes raw=$rawSupportedSize")
+                val uniqueSizes = linkedSetOf<Pair<Int, Int>>()
+                mUVCCamera?.allSupportedSizeList?.forEach { size ->
+                    uniqueSizes.add(size.width to size.height)
                 }
+                mUVCCamera?.getSupportedSizeList(UVCCamera.FRAME_FORMAT_MJPEG)?.forEach { size ->
+                    uniqueSizes.add(size.width to size.height)
+                }
+                mUVCCamera?.getSupportedSizeList(UVCCamera.FRAME_FORMAT_YUYV)?.forEach { size ->
+                    uniqueSizes.add(size.width to size.height)
+                }
+                uniqueSizes.forEach { (width, height) ->
+                    previewSizeList.find {
+                        it.width == width && it.height == height
+                    } ?: previewSizeList.add(PreviewSize(width, height))
+                }
+                cameraInfo?.cameraPreviewSizes = previewSizeList
+                Logger.i(TAG, "getAllPreviewSizes parsed=$previewSizeList")
             }
             aspectRatio ?: return previewSizeList
             // aspect ratio list or all

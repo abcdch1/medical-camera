@@ -857,25 +857,31 @@ class MultiCameraClient(ctx: Context, callback: IDeviceConnectCallBack?) {
             if (sizeList.isNullOrEmpty()) {
                 return PreviewSize(DEFAULT_PREVIEW_WIDTH, DEFAULT_PREVIEW_HEIGHT)
             }
-            // find it
+            // find exact match
             sizeList.find {
                 (it.width == maxWidth && it.height == maxHeight)
-            }.also { size ->
-                size ?: return@also
+            }?.also { size ->
                 return size
             }
-            // find the same aspectRatio
+            // prefer largest size that fits within requested bounds
+            sizeList.filter {
+                it.width <= maxWidth && it.height <= maxHeight
+            }.maxByOrNull {
+                it.width * it.height
+            }?.also { size ->
+                return size
+            }
+            // find the same aspectRatio within bounds
             val aspectRatio = maxWidth.toFloat() / maxHeight
             sizeList.find {
                 val w = it.width
                 val h = it.height
                 val ratio = w.toFloat() / h
                 ratio == aspectRatio && w <= maxWidth && h <= maxHeight
-            }.also { size ->
-                size ?: return@also
+            }?.also { size ->
                 return size
             }
-            // find the closest aspectRatio
+            // find the closest width
             var minDistance: Int = maxWidth
             var closetSize = sizeList[0]
             sizeList.forEach { size ->
@@ -887,8 +893,7 @@ class MultiCameraClient(ctx: Context, callback: IDeviceConnectCallBack?) {
             // use default
             sizeList.find {
                 (it.width == DEFAULT_PREVIEW_WIDTH || it.height == DEFAULT_PREVIEW_HEIGHT)
-            }.also { size ->
-                size ?: return@also
+            }?.also { size ->
                 return size
             }
             return closetSize

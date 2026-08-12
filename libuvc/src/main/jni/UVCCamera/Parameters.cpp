@@ -365,6 +365,7 @@ char *UVCDiags::getSupportedSize(const uvc_device_handle_t *deviceHandle) {
 						switch (fmt_desc->bDescriptorSubtype) {
 						case UVC_VS_FORMAT_UNCOMPRESSED:
 						case UVC_VS_FORMAT_MJPEG:
+						case UVC_VS_FORMAT_FRAME_BASED:
 							write(writer, "index", fmt_desc->bFormatIndex);
 							write(writer, "type", fmt_desc->bDescriptorSubtype);
 							write(writer, "default", fmt_desc->bDefaultFrameIndex);
@@ -379,6 +380,7 @@ char *UVCDiags::getSupportedSize(const uvc_device_handle_t *deviceHandle) {
 							writer.EndArray();
 							break;
 						default:
+							LOGW("unsupported UVC format subtype: %d", fmt_desc->bDescriptorSubtype);
 							break;
 						}
 					}

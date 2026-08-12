@@ -220,8 +220,15 @@ public class UVCCamera {
     	if (mNativePtr != 0 && TextUtils.isEmpty(mSupportedSize)) {
     		mSupportedSize = nativeGetSupportedSize(mNativePtr);
     	}
+    	XLogWrapper.i(TAG, "open camera status: " + mNativePtr + ", supportedSize: " + mSupportedSize);
+    	final List<Size> allSizes = getAllSupportedSizeList();
+    	XLogWrapper.i(TAG, "open camera all supported sizes: " + allSizes);
+    	if (allSizes.isEmpty()) {
+    		XLogWrapper.w(TAG, "open camera: no supported preview sizes parsed from UVC descriptors");
+    	}
     	if (USBMonitor.DEBUG) {
-    		XLogWrapper.i(TAG, "open camera status: " + mNativePtr +", size: " + mSupportedSize);
+    		XLogWrapper.i(TAG, "open camera MJPEG sizes: " + getSupportedSizeList(FRAME_FORMAT_MJPEG));
+    		XLogWrapper.i(TAG, "open camera YUYV sizes: " + getSupportedSizeList(FRAME_FORMAT_YUYV));
 		}
     	List<Size> supportedSizes = getSupportedSizeList();
 		if (!supportedSizes.isEmpty()) {
@@ -364,6 +371,13 @@ public class UVCCamera {
 
 	public List<Size> getSupportedSizeList(int frameFormat) {
 		return getSupportedSize((frameFormat > 0) ? 6 : 4, getSupportedSize());
+	}
+
+	/**
+	 * Get all supported preview sizes across every UVC format (MJPEG, YUYV, etc.).
+	 */
+	public List<Size> getAllSupportedSizeList() {
+		return getSupportedSize(-1, getSupportedSize());
 	}
 
 	public List<Size> getSupportedSize(final int type, final String supportedSize) {

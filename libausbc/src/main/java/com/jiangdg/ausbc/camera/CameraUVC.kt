@@ -45,9 +45,6 @@ import java.util.concurrent.TimeUnit
  */
 class CameraUVC(ctx: Context, device: UsbDevice) : MultiCameraClient.ICamera(ctx, device) {
     private var mUvcCamera: UVCCamera? = null
-    private val mCameraPreviewSize by lazy {
-        arrayListOf<PreviewSize>()
-    }
 
     private val frameCallBack = IFrameCallback { frame ->
         frame?.apply {
@@ -76,33 +73,92 @@ class CameraUVC(ctx: Context, device: UsbDevice) : MultiCameraClient.ICamera(ctx
 
     override fun getAllPreviewSizes(aspectRatio: Double?): MutableList<PreviewSize> {
         val previewSizeList = arrayListOf<PreviewSize>()
-        val isMjpegFormat = mCameraRequest?.previewFormat == CameraRequest.PreviewFormat.FORMAT_MJPEG
-        if (isMjpegFormat && (mUvcCamera?.supportedSizeList?.isNotEmpty() == true)) {
-            mUvcCamera?.supportedSizeList
-        }  else {
-            mUvcCamera?.getSupportedSizeList(UVCCamera.FRAME_FORMAT_YUYV)
-        }?.let { sizeList ->
-            if (sizeList.size > mCameraPreviewSize.size) {
-                mCameraPreviewSize.clear()
-                sizeList.forEach { size->
-                    val width = size.width
-                    val height = size.height
-                    mCameraPreviewSize.add(PreviewSize(width, height))
-                }
-            }
-            if (Utils.debugCamera) {
-                Logger.i(TAG, "aspect ratio = $aspectRatio, supportedSizeList = $sizeList")
-            }
-            mCameraPreviewSize
-        }?.onEach { size ->
-            val width = size.width
-            val height = size.height
+        val uvcCamera = mUvcCamera
+        if (uvcCamera == null) {
+            Logger.w(TAG, "getAllPreviewSizes: camera not opened, device=${device.deviceName}")
+            return previewSizeList
+        }
+
+        val rawSupportedSize = uvcCamera.supportedSize
+        Logger.i(TAG, "getAllPreviewSizes raw=$rawSupportedSize, device=${device.deviceName}")
+
+        val uniqueSizes = linkedSetOf<Pair<Int, Int>>()
+        uvcCamera.allSupportedSizeList?.forEach { size ->
+            uniqueSizes.add(size.width to size.height)
+        }
+        uvcCamera.getSupportedSizeList(UVCCamera.FRAME_FORMAT_MJPEG)?.forEach { size ->
+            uniqueSizes.add(size.width to size.height)
+        }
+        uvcCamera.getSupportedSizeList(UVCCamera.FRAME_FORMAT_YUYV)?.forEach { size ->
+            uniqueSizes.add(size.width to size.height)
+        }
+
+        uniqueSizes.forEach { (width, height) ->
             val ratio = width.toDouble() / height
             if (aspectRatio == null || aspectRatio == ratio) {
                 previewSizeList.add(PreviewSize(width, height))
             }
         }
+        previewSizeList.sortByDescending { it.width * it.height }
+        Logger.i(TAG, "getAllPreviewSizes result=$previewSizeList")
         return previewSizeList
+    }
+
+    private fun logDeviceInfo() {
+        Logger.i(
+            TAG,
+            "USB device: name=${device.deviceName}, vid=0x${device.vendorId.toString(16)}, " +
+                "pid=0x${device.productId.toString(16)}, class=${device.deviceClass}, " +
+                "subclass=${device.deviceSubclass}, protocol=${device.deviceProtocol}"
+        )
+    }
+
+    private fun trySetPreviewSize(width: Int, height: Int, frameFormat: Int): Boolean {
+        val bandwidths = floatArrayOf(1.0f, 0.8f, 0.6f, 0.5f, 0.3f)
+        val maxFpsOptions = intArrayOf(
+            UVCCamera.DEFAULT_PREVIEW_MAX_FPS,
+            25,
+            20,
+            15,
+            10,
+            5
+        )
+        for (bandwidth in bandwidths) {
+            for (maxFps in maxFpsOptions) {
+                try {
+                    mUvcCamera?.setPreviewSize(
+                        width,
+                        height,
+                        MIN_FS,
+                        maxFps,
+                        frameFormat,
+                        bandwidth
+                    )
+                    Logger.i(
+                        TAG,
+                        "setPreviewSize OK: ${width}x${height}, format=$frameFormat, " +
+                            "fps=$MIN_FS-$maxFps, bandwidth=$bandwidth"
+                    )
+                    return true
+                } catch (e: Exception) {
+                    Logger.w(
+                        TAG,
+                        "setPreviewSize failed: ${width}x${height}, format=$frameFormat, " +
+                            "fps=$MIN_FS-$maxFps, bandwidth=$bandwidth, err=${e.message}"
+                    )
+                }
+            }
+        }
+        return false
+    }
+
+    private fun resolvePreviewSize(request: CameraRequest): PreviewSize {
+        val allSizes = getAllPreviewSizes()
+        if (allSizes.isEmpty()) {
+            Logger.w(TAG, "resolvePreviewSize: no supported sizes, fallback to request size")
+            return PreviewSize(request.previewWidth, request.previewHeight)
+        }
+        return getSuitableSize(request.previewWidth, request.previewHeight)
     }
 
     override fun <T> openCameraInternal(cameraView: T) {
@@ -119,76 +175,91 @@ class CameraUVC(ctx: Context, device: UsbDevice) : MultiCameraClient.ICamera(ctx
         }
         // 1. create a UVCCamera
         val request = mCameraRequest!!
+        logDeviceInfo()
         try {
             mUvcCamera = UVCCamera().apply {
                 open(mCtrlBlock)
             }
+            Logger.i(TAG, "UVCCamera opened, supportedSize=${mUvcCamera?.supportedSize}")
+            Logger.i(TAG, "allSupportedSizeList=${mUvcCamera?.allSupportedSizeList}")
         } catch (e: Exception) {
             closeCamera()
             postStateEvent(ICameraStateCallBack.State.ERROR, "open camera failed ${e.localizedMessage}")
             Logger.e(TAG, "open camera failed.", e)
+            return
         }
 
         // 2. set preview size and register preview callback
-        var previewSize = getSuitableSize(request.previewWidth, request.previewHeight).apply {
+        var previewSize = resolvePreviewSize(request).apply {
             mCameraRequest!!.previewWidth = width
             mCameraRequest!!.previewHeight = height
         }
-        val previewFormat = if (mCameraRequest?.previewFormat == CameraRequest.PreviewFormat.FORMAT_YUYV) {
+        val preferMjpeg = mCameraRequest?.previewFormat != CameraRequest.PreviewFormat.FORMAT_YUYV
+        val primaryFormat = if (preferMjpeg) {
+            UVCCamera.FRAME_FORMAT_MJPEG
+        } else {
+            UVCCamera.FRAME_FORMAT_YUYV
+        }
+        val fallbackFormat = if (primaryFormat == UVCCamera.FRAME_FORMAT_MJPEG) {
             UVCCamera.FRAME_FORMAT_YUYV
         } else {
             UVCCamera.FRAME_FORMAT_MJPEG
         }
-        try {
-            Logger.i(TAG, "getSuitableSize: $previewSize")
-            if (! isPreviewSizeSupported(previewSize)) {
-                closeCamera()
-                postStateEvent(ICameraStateCallBack.State.ERROR, "unsupported preview size")
-                Logger.e(TAG, "open camera failed, preview size($previewSize) unsupported-> ${mUvcCamera?.supportedSizeList}")
-                return
-            }
-            initEncodeProcessor(previewSize.width, previewSize.height)
-            // if give custom minFps or maxFps or unsupported preview size
-            // this method will fail
-            mUvcCamera?.setPreviewSize(
-                previewSize.width,
-                previewSize.height,
-                MIN_FS,
-                MAX_FPS,
-                previewFormat,
-                UVCCamera.DEFAULT_BANDWIDTH
-            )
-        } catch (e: Exception) {
-            try {
-                previewSize = getSuitableSize(request.previewWidth, request.previewHeight).apply {
+
+        Logger.i(TAG, "getSuitableSize: $previewSize, supported=${getAllPreviewSizes()}")
+        if (!isPreviewSizeSupported(previewSize)) {
+            val firstSupported = getAllPreviewSizes().firstOrNull()
+            if (firstSupported != null) {
+                Logger.w(TAG, "preview size($previewSize) unsupported, fallback to $firstSupported")
+                previewSize = firstSupported.apply {
                     mCameraRequest!!.previewWidth = width
                     mCameraRequest!!.previewHeight = height
                 }
-                if (! isPreviewSizeSupported(previewSize)) {
-                    postStateEvent(ICameraStateCallBack.State.ERROR, "unsupported preview size")
-                    closeCamera()
-                    Logger.e(TAG, "open camera failed, preview size($previewSize) unsupported-> ${mUvcCamera?.supportedSizeList}")
-                    return
-                }
-                Logger.e(TAG, " setPreviewSize failed(format is $previewFormat), try to use other format...")
-                mUvcCamera?.setPreviewSize(
-                    previewSize.width,
-                    previewSize.height,
-                    MIN_FS,
-                    MAX_FPS,
-                    if (previewFormat == UVCCamera.FRAME_FORMAT_YUYV) {
-                        UVCCamera.FRAME_FORMAT_MJPEG
-                    } else {
-                        UVCCamera.FRAME_FORMAT_YUYV
-                    },
-                    UVCCamera.DEFAULT_BANDWIDTH
-                )
-            } catch (e: Exception) {
+            } else {
                 closeCamera()
-                postStateEvent(ICameraStateCallBack.State.ERROR, "err: ${e.localizedMessage}")
-                Logger.e(TAG, " setPreviewSize failed, even using yuv format", e)
+                postStateEvent(ICameraStateCallBack.State.ERROR, "unsupported preview size")
+                Logger.e(
+                    TAG,
+                    "open camera failed, no supported preview size. raw=${mUvcCamera?.supportedSize}"
+                )
                 return
             }
+        }
+
+        initEncodeProcessor(previewSize.width, previewSize.height)
+        var previewConfigured = trySetPreviewSize(previewSize.width, previewSize.height, primaryFormat)
+        if (!previewConfigured) {
+            Logger.w(TAG, "primary format($primaryFormat) failed, try fallback format($fallbackFormat)")
+            previewConfigured = trySetPreviewSize(previewSize.width, previewSize.height, fallbackFormat)
+        }
+        if (!previewConfigured) {
+            val fallbackSize = getAllPreviewSizes()
+                .sortedBy { it.width * it.height }
+                .firstOrNull { size ->
+                    size.width != previewSize.width || size.height != previewSize.height
+                }
+            if (fallbackSize != null) {
+                Logger.w(TAG, "retry with smaller preview size: $fallbackSize")
+                previewSize = fallbackSize.apply {
+                    mCameraRequest!!.previewWidth = width
+                    mCameraRequest!!.previewHeight = height
+                }
+                initEncodeProcessor(previewSize.width, previewSize.height)
+                previewConfigured = trySetPreviewSize(previewSize.width, previewSize.height, primaryFormat)
+                    || trySetPreviewSize(previewSize.width, previewSize.height, fallbackFormat)
+            }
+        }
+        if (!previewConfigured) {
+            closeCamera()
+            postStateEvent(
+                ICameraStateCallBack.State.ERROR,
+                "setPreviewSize failed for all format/bandwidth combinations"
+            )
+            Logger.e(
+                TAG,
+                "setPreviewSize failed, supported=${getAllPreviewSizes()}, raw=${mUvcCamera?.supportedSize}"
+            )
+            return
         }
         // if not opengl render or opengl render with preview callback
         // there should opened
@@ -513,6 +584,5 @@ class CameraUVC(ctx: Context, device: UsbDevice) : MultiCameraClient.ICamera(ctx
     companion object {
         private const val TAG = "CameraUVC"
         private const val MIN_FS = 1
-        private const val MAX_FPS = 61
     }
 }
