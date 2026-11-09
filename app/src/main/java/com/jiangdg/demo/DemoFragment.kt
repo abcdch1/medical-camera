@@ -32,8 +32,11 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
+import android.view.GestureDetector
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupWindow
@@ -169,6 +172,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         mViewBinding.albumPreviewIv.setTheme(PreviewImageView.Theme.DARK)
         switchLayoutClick()
         initFullScreenControls()
+        initZoomGestures()
     }
 
     // ---------------------------------------------------------------------
@@ -228,6 +232,108 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
 
     private fun cancelAutoHide() {
         mMainHandler.removeCallbacks(mAutoHideRunnable)
+    }
+
+    // ---------------------------------------------------------------------
+    // Digital zoom: pinch with two fingers to zoom, drag with one finger to
+    // move around while zoomed, double-tap to zoom 2x / back to 1x.
+    // Only the image is enlarged (crop), the camera lens is not touched.
+    // Photos and videos are saved exactly as shown on screen.
+    // ---------------------------------------------------------------------
+
+    private var mZoomScale = 1f
+    private var mZoomTx = 0f   // offset in normalized device coords (-1..1 = view width)
+    private var mZoomTy = 0f
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun initZoomGestures() {
+        val scaleDetector = ScaleGestureDetector(requireContext(),
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    zoomAt(mZoomScale * detector.scaleFactor, detector.focusX, detector.focusY)
+                    return true
+                }
+            })
+        val gestureDetector = GestureDetector(requireContext(),
+            object : GestureDetector.SimpleOnGestureListener() {
+                override fun onDown(e: MotionEvent): Boolean = true
+
+                override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                    toggleControls()
+                    return true
+                }
+
+                override fun onDoubleTap(e: MotionEvent): Boolean {
+                    if (mZoomScale > 1.01f) {
+                        resetZoom()
+                    } else {
+                        zoomAt(2f, e.x, e.y)
+                    }
+                    return true
+                }
+
+                override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+                    if (mZoomScale <= 1f || scaleDetector.isInProgress) return false
+                    val view = previewView() ?: return false
+                    // Screen y grows downwards, NDC y grows upwards.
+                    mZoomTx -= distanceX * 2f / view.width
+                    mZoomTy += distanceY * 2f / view.height
+                    applyZoom()
+                    return true
+                }
+            })
+        mViewBinding.cameraViewContainer.setOnTouchListener { _, event ->
+            scaleDetector.onTouchEvent(event)
+            gestureDetector.onTouchEvent(event)
+            true
+        }
+        mViewBinding.zoomTv.setOnClickListener { resetZoom() }
+    }
+
+    /** The view that shows the camera image (centered inside cameraViewContainer). */
+    private fun previewView(): View? {
+        val container = mViewBinding.cameraViewContainer
+        val view = if (container.childCount > 0) container.getChildAt(0) else container
+        return if (view.width > 0 && view.height > 0) view else null
+    }
+
+    /**
+     * Zoom to [newScale] keeping the point under the fingers ([focusX], [focusY],
+     * in cameraViewContainer coordinates) at the same place on screen.
+     */
+    private fun zoomAt(newScale: Float, focusX: Float, focusY: Float) {
+        if (! isCameraOpened()) return
+        val view = previewView() ?: return
+        val scale = newScale.coerceIn(1f, MAX_ZOOM)
+        // focus point in NDC of the preview view
+        val fx = (focusX - view.left) / view.width * 2f - 1f
+        val fy = 1f - (focusY - view.top) / view.height * 2f
+        val ratio = scale / mZoomScale
+        mZoomTx = fx - ratio * (fx - mZoomTx)
+        mZoomTy = fy - ratio * (fy - mZoomTy)
+        mZoomScale = scale
+        applyZoom()
+    }
+
+    private fun resetZoom() {
+        mZoomScale = 1f
+        mZoomTx = 0f
+        mZoomTy = 0f
+        applyZoom()
+    }
+
+    private fun applyZoom() {
+        // Never show anything outside the camera image.
+        val limit = mZoomScale - 1f
+        mZoomTx = mZoomTx.coerceIn(-limit, limit)
+        mZoomTy = mZoomTy.coerceIn(-limit, limit)
+        setZoom(mZoomScale, mZoomTx, mZoomTy)
+        if (mZoomScale > 1.01f) {
+            mViewBinding.zoomTv.text = getString(R.string.zoom_level, mZoomScale)
+            mViewBinding.zoomTv.visibility = View.VISIBLE
+        } else {
+            mViewBinding.zoomTv.visibility = View.GONE
+        }
     }
 
     override fun initData() {
@@ -325,6 +431,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         mViewBinding.noCameraTv.visibility = View.VISIBLE
         mViewBinding.frameRateTv.visibility = View.GONE
         showControls()
+        resetZoom()
         ToastUtils.show(R.string.toast_camera_closed)
     }
 
@@ -350,6 +457,8 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         })
         ToastUtils.show(R.string.toast_camera_opened)
         showControls()
+        // A new camera session starts without zoom.
+        resetZoom()
     }
 
     private fun switchLayoutClick() {
@@ -954,5 +1063,6 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         private const val WHAT_STOP_TIMER = 0x01
         private const val CONTROLS_AUTO_HIDE_MS = 4000L
         private const val CONTROLS_FADE_MS = 250L
+        private const val MAX_ZOOM = 8f
     }
 }

@@ -264,6 +264,25 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- Digital zoom level, visible while zoomed in; tap to reset to 1x -->
+    <TextView
+        android:id="@+id/zoomTv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="64dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/bg_rec_timer"
+        android:paddingStart="12dp"
+        android:paddingTop="6dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="6dp"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <!-- Recording timer: stays visible even when the controls are hidden -->
     <LinearLayout
         android:id="@+id/recTimerLayout"

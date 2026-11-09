@@ -25,8 +25,8 @@ task clean(type: Delete) {
 
 ext {
     // Medical Camera app version (shown in the APK name and in Settings > Apps)
-    appVersionName = '1.0.0'
-    appVersionCode = 1
+    appVersionName = '1.1.0'
+    appVersionCode = 2
     versionNameString = '3.6.0'
     versionCode = 129
     versionCompiler = 36

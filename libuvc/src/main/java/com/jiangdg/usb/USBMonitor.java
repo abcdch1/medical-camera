@@ -163,7 +163,8 @@ public final class USBMonitor {
 							processCancel(device);
 						}
 					} else {
-						XLogWrapper.e(TAG, "onReceive: USB_PERMISSION with null device");
+						XLogWrapper.e(TAG, "onReceive: USB_PERMISSION with null device, checking pending device");
+						connectPendingDeviceIfGranted();
 					}
 				}
 			} else if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
@@ -336,11 +337,12 @@ public final class USBMonitor {
 		try {
 			int flags = PendingIntent.FLAG_UPDATE_CURRENT; // Always update existing intents
 			
-			if (Build.VERSION.SDK_INT >= 34) {
-				// Android 14+ requires IMMUTABLE flag for security
-				XLogWrapper.i(TAG, "register: Android 14+ detected, using FLAG_IMMUTABLE");
-				flags |= PendingIntent.FLAG_IMMUTABLE;
-			} else if (Build.VERSION.SDK_INT >= 31) {
+			if (Build.VERSION.SDK_INT >= 31) {
+				// Must be MUTABLE: UsbManager adds EXTRA_DEVICE and EXTRA_PERMISSION_GRANTED
+				// to this intent. With FLAG_IMMUTABLE (used before) the result arrived
+				// without the device, was ignored, and the camera only opened after the
+				// next periodic check (~5 s later). The intent is explicit (setPackage),
+				// so a mutable PendingIntent is allowed on Android 14+.
 				// Android 12+ requires explicit package name and MUTABLE flag
 				XLogWrapper.i(TAG, "register: Android 12+ detected, using FLAG_MUTABLE");
 				flags |= PendingIntent.FLAG_MUTABLE;
@@ -796,6 +798,15 @@ public final class USBMonitor {
             prefs.edit().putBoolean("first_run", false).apply();
         }
         
+        // Fast path: permission already granted (e.g. the user chose
+        // "always open Medical Camera" for this device) -> connect immediately.
+        if (mUsbManager.hasPermission(device)) {
+            XLogWrapper.i(TAG, "requestPermission: already granted, connecting immediately");
+            processConnect(device);
+            return false;
+        }
+        mPendingPermissionDevice = device;
+
         // For Android 9+ (API 28+), reset permission first
         if (Build.VERSION.SDK_INT >= 28) {
             XLogWrapper.i(TAG, "Android 9+ detected, resetting device permission first");
@@ -1097,6 +1108,30 @@ public final class USBMonitor {
 		} else {
 			XLogWrapper.w(TAG, "processCancel: No listener registered to notify about cancellation");
 		}
+	}
+
+	/** Device for which a permission dialog is currently shown. */
+	private volatile UsbDevice mPendingPermissionDevice;
+
+	/**
+	 * Some Android versions deliver the permission result without EXTRA_DEVICE.
+	 * In that case look up the device we asked for and connect it if the user
+	 * granted permission.
+	 */
+	private void connectPendingDeviceIfGranted() {
+		final UsbDevice pending = mPendingPermissionDevice;
+		if (pending == null || destroyed) return;
+		for (final UsbDevice device : mUsbManager.getDeviceList().values()) {
+			if (device.getDeviceName().equals(pending.getDeviceName())
+					&& mUsbManager.hasPermission(device)) {
+				XLogWrapper.i(TAG, "connectPendingDeviceIfGranted: permission granted for " + device.getDeviceName());
+				mPendingPermissionDevice = null;
+				updatePermission(device, true);
+				processConnect(device);
+				return;
+			}
+		}
+		XLogWrapper.w(TAG, "connectPendingDeviceIfGranted: permission not granted");
 	}
 
 	private void processAttach(final UsbDevice device) {

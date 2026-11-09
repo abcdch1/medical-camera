@@ -335,6 +335,11 @@ class RenderManager(
      * @param type rotate angle, null means rotating nothing
      * see [RotateType.ANGLE_90], [RotateType.ANGLE_270],...etc.
      */
+    /** Digital zoom, see [CameraRender.setZoom]. */
+    fun setZoom(scale: Float, tx: Float, ty: Float) {
+        mCameraRender?.setZoom(scale, tx, ty)
+    }
+
     fun setRotateType(type: RotateType?) {
         mRenderHandler?.obtainMessage(MSG_GL_ROUTE_ANGLE, type)?.sendToTarget()
     }

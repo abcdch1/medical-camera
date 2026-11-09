@@ -460,6 +460,13 @@ abstract class CameraFragment : BaseFragment(), ICameraStateCallBack {
         getCurrentCamera()?.setRotateType(type)
     }
 
+    /**
+     * Digital zoom of the camera image (preview, photo and video)
+     */
+    protected fun setZoom(scale: Float, tx: Float, ty: Float) {
+        getCurrentCamera()?.setZoom(scale, tx, ty)
+    }
+
     /***********************************************************************************************/
     /*********************************Camera parameter control *************************************/
     /**

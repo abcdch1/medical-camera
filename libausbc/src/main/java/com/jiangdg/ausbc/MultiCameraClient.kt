@@ -584,6 +584,17 @@ class MultiCameraClient(ctx: Context, callback: IDeviceConnectCallBack?) {
         }
 
         /**
+         * Digital zoom (does not change the lens / focal length)
+         *
+         * @param scale >= 1, 1 = no zoom
+         * @param tx horizontal offset in NDC
+         * @param ty vertical offset in NDC
+         */
+        fun setZoom(scale: Float, tx: Float, ty: Float) {
+            mRenderManager?.setZoom(scale, tx, ty)
+        }
+
+        /**
          * Set render size
          *
          * @param width surface width

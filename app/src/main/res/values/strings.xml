@@ -43,4 +43,6 @@
     <string name="toast_capture_image_success">Chụp ảnh thành công</string>
     <string name="toast_capture_video_failed">Quay video thất bại</string>
     <string name="toast_capture_video_success">Quay video thành công</string>
+
+    <string name="zoom_level">%.1fx  ✕</string>
 </resources>

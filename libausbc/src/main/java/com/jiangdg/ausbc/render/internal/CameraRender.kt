@@ -36,6 +36,13 @@ class CameraRender(context: Context) : AbstractFboRender(context) {
     private var mMVPMatrix = FloatArray(16)
     private var mOESTextureId: Int = -1
 
+    // Digital zoom: [scale, translateX, translateY] in normalized device coords.
+    // Written from the UI thread, read on the GL thread -> one volatile array.
+    @Volatile
+    private var mZoom = floatArrayOf(1f, 0f, 0f)
+    private val mZoomMatrix = FloatArray(16)
+    private val mFinalMVPMatrix = FloatArray(16)
+
     override fun init() {
         mOESTextureId = createOESTexture()
         setMVPMatrix(0)
@@ -45,7 +52,12 @@ class CameraRender(context: Context) : AbstractFboRender(context) {
     }
 
     override fun beforeDraw() {
-        GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0)
+        val zoom = mZoom
+        Matrix.setIdentityM(mZoomMatrix, 0)
+        Matrix.translateM(mZoomMatrix, 0, zoom[1], zoom[2], 0f)
+        Matrix.scaleM(mZoomMatrix, 0, zoom[0], zoom[0], 1f)
+        Matrix.multiplyMM(mFinalMVPMatrix, 0, mZoomMatrix, 0, mMVPMatrix, 0)
+        GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mFinalMVPMatrix, 0)
         GLES20.glUniformMatrix4fv(mStMatrixHandle, 1, false, mStMatrix, 0)
     }
 
@@ -102,6 +114,17 @@ class CameraRender(context: Context) : AbstractFboRender(context) {
             }
         }
         return mMVPMatrix
+    }
+
+    /**
+     * Digital zoom (crop + enlarge) applied to preview, photos and videos.
+     *
+     * @param scale >= 1, 1 = no zoom
+     * @param tx horizontal offset in NDC (-(scale-1)..(scale-1))
+     * @param ty vertical offset in NDC (-(scale-1)..(scale-1))
+     */
+    fun setZoom(scale: Float, tx: Float, ty: Float) {
+        mZoom = floatArrayOf(scale, tx, ty)
     }
 
     fun getCameraTextureId() = mOESTextureId
