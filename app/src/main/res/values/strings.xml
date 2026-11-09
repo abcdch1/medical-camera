@@ -1,12 +1,46 @@
 <resources>
-    <string name="app_name" translatable="false">AUSBC3</string>
-    <string name="permission_tip" translatable="false">You have already denied permission access. Go to the Settings page to turn on permissions</string>
-    <string name="dialog_contact_title" translatable="false">Contact me:</string>
-    <string name="dialog_contact_message" translatable="false">765067602@qq.com\n\n❤ version: %s</string>
-    <string name="show_log" translatable="false">LOG</string>
-    <string name="dialog_log_title" translatable="false">App Logs</string>
-    <string name="dialog_log_empty" translatable="false">No logs yet.</string>
-    <string name="dialog_log_copy" translatable="false">Copy</string>
-    <string name="dialog_log_clear" translatable="false">Clear</string>
-    <string name="dialog_log_copied" translatable="false">Logs copied to clipboard</string>
+    <string name="app_name" translatable="false">Medical Camera</string>
+    <string name="permission_tip">Bạn đã từ chối cấp quyền. Hãy vào Cài đặt để bật quyền Camera và Micro cho ứng dụng.</string>
+    <string name="dialog_contact_title">Thông tin ứng dụng</string>
+    <string name="dialog_contact_message">Medical Camera\nỨng dụng xem, chụp ảnh và quay video từ camera nội soi USB (UVC).\n\nPhiên bản: %s</string>
+    <string name="show_log">NHẬT KÝ</string>
+    <string name="dialog_log_title">Nhật ký ứng dụng</string>
+    <string name="dialog_log_empty">Chưa có nhật ký.</string>
+    <string name="dialog_log_copy">Sao chép</string>
+    <string name="dialog_log_clear">Xoá</string>
+    <string name="dialog_log_copied">Đã sao chép nhật ký</string>
+    <string name="dialog_log_cleared">Đã xoá nhật ký</string>
+
+    <string name="mode_photo">Ảnh</string>
+    <string name="mode_video">Video</string>
+    <string name="mode_audio">Âm thanh</string>
+    <string name="no_camera_hint">Chưa kết nối camera.\nHãy cắm camera nội soi USB vào máy.</string>
+    <string name="more_multi_camera">Nhiều camera</string>
+    <string name="more_contrast">Tương phản</string>
+    <string name="more_resolution">Độ phân giải</string>
+    <string name="more_about">Thông tin</string>
+    <string name="effect_tab_filter">Bộ lọc</string>
+    <string name="effect_tab_animation">Hiệu ứng</string>
+    <string name="effect_black_white">Đen trắng</string>
+    <string name="effect_zoom">Phóng to</string>
+    <string name="effect_soul">Bóng mờ</string>
+    <string name="no_uvc_cameras">Không có camera USB</string>
+
+    <string name="frame_rate">Tốc độ khung hình: %d fps</string>
+    <string name="toast_camera_opened">Đã kết nối camera</string>
+    <string name="toast_camera_closed">Đã ngắt kết nối camera</string>
+    <string name="toast_camera_error">Lỗi mở camera: %s</string>
+    <string name="toast_camera_not_working">Camera chưa hoạt động!</string>
+    <string name="toast_camera_not_opened">Camera chưa được mở</string>
+    <string name="toast_unknown_error">Lỗi không xác định</string>
+    <string name="toast_saved_to">Đã lưu: %s</string>
+    <string name="toast_usb_device_failed">Không tìm thấy thiết bị USB</string>
+    <string name="toast_set_effect_failed">Không áp dụng được hiệu ứng!</string>
+    <string name="toast_preview_size_failed">Không lấy được danh sách độ phân giải của camera</string>
+    <string name="toast_open_failed">Không mở được: %s</string>
+    <string name="toast_open_camera_failed">Không mở được camera</string>
+    <string name="toast_capture_image_failed">Chụp ảnh thất bại</string>
+    <string name="toast_capture_image_success">Chụp ảnh thành công</string>
+    <string name="toast_capture_video_failed">Quay video thất bại</string>
+    <string name="toast_capture_video_success">Quay video thành công</string>
 </resources>

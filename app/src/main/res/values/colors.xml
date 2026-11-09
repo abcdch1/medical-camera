@@ -9,5 +9,8 @@
     <color name="white">#FFFFFFFF</color>
     <color name="transparent">#00000000</color>
 
+    <color name="icon_background">#FF0E7490</color>
+    <color name="overlay_bg">#99000000</color>
+
     <color name="GRAY">#ff808080</color>
 </resources>

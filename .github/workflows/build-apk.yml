@@ -1,4 +1,4 @@
-name: Build APK
+name: Build Medical Camera APK
 
 on:
   push:
@@ -45,13 +45,27 @@ jobs:
       - name: Ensure Gradle wrapper is executable
         run: chmod +x gradlew
 
+      - name: Decode signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/medical-camera.p12"
+            echo "SIGNING_KEYSTORE_PATH=$RUNNER_TEMP/medical-camera.p12" >> "$GITHUB_ENV"
+            echo "Signing with the Medical Camera key"
+          else
+            echo "::warning::Secret KEYSTORE_BASE64 is not set - APK is signed with a temporary debug key and cannot update a previous install"
+          fi
+
       - name: Build release APK
+        env:
+          SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ausbc-release-apk
+          name: medical-camera-apk
           path: app/build/outputs/apk/release/*.apk
           retention-days: 90
           if-no-files-found: error
@@ -61,7 +75,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: Build #${{ github.run_number }} (${{ github.sha }})
+          name: Medical Camera - bản build #${{ github.run_number }}
           files: app/build/outputs/apk/release/*.apk
           prerelease: true
           generate_release_notes: true

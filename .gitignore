@@ -15,3 +15,8 @@ libuvc/src/main/libs
 .vscode/settings.json
 app/release/
 .history/
+
+# Signing keys must never be committed
+*.p12
+*.jks
+*.keystore

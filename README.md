@@ -1,4 +1,40 @@
-# AUSBC - Android USB Camera
+# Medical Camera
+
+Ứng dụng Android xem, chụp ảnh và quay video từ **camera nội soi USB (UVC)**, xây dựng dựa trên [android-usb-camera-2](https://github.com/phunb/android-usb-camera-2) / AUSBC (Apache 2.0).
+
+## Khác biệt so với bản gốc
+
+- Tên ứng dụng **Medical Camera**, package `vn.medicalcamera.app` (cài song song được với app gốc), icon bác sĩ nội soi.
+- **Toàn màn hình**: hình camera chiếm cả màn hình, thanh trạng thái và thanh điều hướng được ẩn đi.
+- **Nút tự ẩn**: các nút chụp, quay và công cụ tự ẩn sau 4 giây. Chạm vào màn hình để hiện lại, chạm thêm lần nữa để ẩn. Khi đang quay video, đồng hồ đếm giờ luôn hiển thị.
+- Giao diện **tiếng Việt**.
+- Ảnh và video được lưu vào `Pictures/MedicalCamera` và `Movies/MedicalCamera`.
+- Đã tắt gửi báo cáo lỗi (Bugly) về tài khoản của tác giả gốc.
+
+## Tải APK
+
+Mỗi lần push lên branch `main`, GitHub Actions tự build APK:
+
+1. Tab **Releases** của repo: tải file `MedicalCamera-x.y.z-release.apk` trong bản build mới nhất.
+2. Hoặc tab **Actions** → chọn lần chạy → mục **Artifacts** → `medical-camera-apk`.
+
+### Khoá ký ứng dụng
+
+Để các bản build sau cài đè được lên bản trước, APK cần được ký bằng cùng một khoá.
+Khoá **không** nằm trong repo mà nằm trong 2 Secret của repo (Settings → Secrets and variables → Actions):
+
+- `KEYSTORE_BASE64`: nội dung file khoá (`.p12`) đã mã hoá base64
+- `KEYSTORE_PASSWORD`: mật khẩu của khoá
+
+Nếu chưa có Secret, APK vẫn được build nhưng ký bằng khoá tạm, nên phải gỡ app cũ trước khi cài bản mới.
+
+Đổi phiên bản trong `build.gradle` (`appVersionName`, `appVersionCode`).
+
+---
+
+## Nội dung README gốc
+
+### AUSBC - Android USB Camera
 
 [![GitHub last commit](https://img.shields.io/github/last-commit/ernestp/AndroidUSBCamera?style=flat-square)](https://github.com/ernestp/AndroidUSBCamera/commits/master)
 [![GitHub issues](https://img.shields.io/github/issues/ernestp/AndroidUSBCamera?style=flat-square)](https://github.com/ernestp/AndroidUSBCamera/issues)

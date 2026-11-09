@@ -100,7 +100,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
             CameraEffect.NONE_FILTER,
             CameraEffect(
                 EffectBlackWhite.ID,
-                "BlackWhite",
+                getString(R.string.effect_black_white),
                 CameraEffect.CLASSIFY_ID_FILTER,
                 effect = EffectBlackWhite(requireActivity()),
                 coverResId = R.mipmap.filter0
@@ -108,14 +108,14 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
             CameraEffect.NONE_ANIMATION,
             CameraEffect(
                 EffectZoom.ID,
-                "Zoom",
+                getString(R.string.effect_zoom),
                 CameraEffect.CLASSIFY_ID_ANIMATION,
                 effect = EffectZoom(requireActivity()),
                 coverResId = R.mipmap.filter2
             ),
             CameraEffect(
                 EffectSoul.ID,
-                "Soul",
+                getString(R.string.effect_soul),
                 CameraEffect.CLASSIFY_ID_ANIMATION,
                 effect = EffectSoul(requireActivity()),
                 coverResId = R.mipmap.filter1
@@ -168,12 +168,72 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         mViewBinding.captureBtn.setOnViewClickListener(this)
         mViewBinding.albumPreviewIv.setTheme(PreviewImageView.Theme.DARK)
         switchLayoutClick()
+        initFullScreenControls()
+    }
+
+    // ---------------------------------------------------------------------
+    // Full-screen mode: tap anywhere on the preview to show / hide the
+    // controls. They hide again automatically after CONTROLS_AUTO_HIDE_MS.
+    // ---------------------------------------------------------------------
+
+    private var isControlsVisible = true
+    private val mAutoHideRunnable = Runnable { hideControls() }
+
+    private fun initFullScreenControls() {
+        mViewBinding.rootLayout.setOnClickListener { toggleControls() }
+        // Tapping on the semi-transparent bars must not hide the controls.
+        mViewBinding.toolbarBg.setOnClickListener { scheduleAutoHide() }
+        mViewBinding.controlPanelLayout.setOnClickListener { scheduleAutoHide() }
+        // Keep the controls away from a notch / punch-hole camera.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            mViewBinding.controlsLayer.setOnApplyWindowInsetsListener { v, insets ->
+                insets.displayCutout?.let { cutout ->
+                    v.setPadding(cutout.safeInsetLeft, cutout.safeInsetTop, cutout.safeInsetRight, cutout.safeInsetBottom)
+                }
+                insets
+            }
+        }
+    }
+
+    private fun toggleControls() {
+        if (isControlsVisible) hideControls() else showControls()
+    }
+
+    private fun showControls() {
+        val layer = mViewBinding.controlsLayer
+        isControlsVisible = true
+        layer.animate().cancel()
+        layer.visibility = View.VISIBLE
+        layer.animate().alpha(1f).setDuration(CONTROLS_FADE_MS).start()
+        scheduleAutoHide()
+    }
+
+    private fun hideControls() {
+        mMainHandler.removeCallbacks(mAutoHideRunnable)
+        // Keep everything on screen while no camera is connected.
+        if (! isCameraOpened()) return
+        val layer = mViewBinding.controlsLayer
+        isControlsVisible = false
+        layer.animate().cancel()
+        layer.animate().alpha(0f).setDuration(CONTROLS_FADE_MS).withEndAction {
+            if (! isControlsVisible) layer.visibility = View.GONE
+        }.start()
+    }
+
+    /** (Re)start the countdown after which the controls disappear. */
+    private fun scheduleAutoHide() {
+        mMainHandler.removeCallbacks(mAutoHideRunnable)
+        mMainHandler.postDelayed(mAutoHideRunnable, CONTROLS_AUTO_HIDE_MS)
+    }
+
+    private fun cancelAutoHide() {
+        mMainHandler.removeCallbacks(mAutoHideRunnable)
     }
 
     override fun initData() {
         super.initData()
         EventBus.with<Int>(BusKey.KEY_FRAME_RATE).observe(this, {
-            mViewBinding.frameRateTv.text = "frame rate:  $it fps"
+            mViewBinding.frameRateTv.text = getString(R.string.frame_rate, it)
         })
 
         EventBus.with<Boolean>(BusKey.KEY_RENDER_READY).observe(this, { ready ->
@@ -254,18 +314,23 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
 
     private fun handleCameraError(msg: String?) {
         mViewBinding.uvcLogoIv.visibility = View.VISIBLE
+        mViewBinding.noCameraTv.visibility = View.VISIBLE
         mViewBinding.frameRateTv.visibility = View.GONE
-        ToastUtils.show("camera opened error: $msg")
+        showControls()
+        ToastUtils.show(getString(R.string.toast_camera_error, msg ?: ""))
     }
 
     private fun handleCameraClosed() {
         mViewBinding.uvcLogoIv.visibility = View.VISIBLE
+        mViewBinding.noCameraTv.visibility = View.VISIBLE
         mViewBinding.frameRateTv.visibility = View.GONE
-        ToastUtils.show("camera closed success")
+        showControls()
+        ToastUtils.show(R.string.toast_camera_closed)
     }
 
     private fun handleCameraOpened() {
         mViewBinding.uvcLogoIv.visibility = View.GONE
+        mViewBinding.noCameraTv.visibility = View.GONE
         mViewBinding.frameRateTv.visibility = View.VISIBLE
         mViewBinding.brightnessSb.max = (getCurrentCamera() as? CameraUVC)?.getBrightnessMax() ?: 100
         mViewBinding.brightnessSb.progress = (getCurrentCamera() as? CameraUVC)?.getBrightness() ?: 0
@@ -276,14 +341,15 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
-
+                cancelAutoHide()
             }
 
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
-
+                scheduleAutoHide()
             }
         })
-        ToastUtils.show("camera opened success")
+        ToastUtils.show(R.string.toast_camera_opened)
+        showControls()
     }
 
     private fun switchLayoutClick() {
@@ -328,8 +394,9 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
     override fun getGravity(): Int = Gravity.CENTER
 
     override fun onViewClick(mode: CaptureMediaView.CaptureMode?) {
+        scheduleAutoHide()
         if (! isCameraOpened()) {
-            ToastUtils.show("camera not worked!")
+            ToastUtils.show(R.string.toast_camera_not_working)
             return
         }
         when (mode) {
@@ -363,7 +430,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
             }
 
             override fun onError(error: String?) {
-                ToastUtils.show(error ?: "未知异常")
+                ToastUtils.show(error ?: getString(R.string.toast_unknown_error))
                 isCapturingVideoOrAudio = false
                 mViewBinding.captureBtn.setCaptureVideoState(CaptureMediaView.CaptureVideoState.UNDO)
                 stopMediaTimer()
@@ -378,7 +445,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
                 mViewBinding.lensFacingBtn1.visibility = View.VISIBLE
                 mViewBinding.recTimerLayout.visibility = View.GONE
                 stopMediaTimer()
-                ToastUtils.show(path ?: "error")
+                ToastUtils.show(getString(R.string.toast_saved_to, path ?: ""))
             }
 
         })
@@ -402,14 +469,14 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
             }
 
             override fun onError(error: String?) {
-                ToastUtils.show(error ?: "未知异常")
+                ToastUtils.show(error ?: getString(R.string.toast_unknown_error))
                 isCapturingVideoOrAudio = false
                 mViewBinding.captureBtn.setCaptureVideoState(CaptureMediaView.CaptureVideoState.UNDO)
                 stopMediaTimer()
             }
 
             override fun onComplete(path: String?) {
-                ToastUtils.show(path ?: "")
+                ToastUtils.show(getString(R.string.toast_saved_to, path ?: ""))
                 isCapturingVideoOrAudio = false
                 mViewBinding.captureBtn.setCaptureVideoState(CaptureMediaView.CaptureVideoState.UNDO)
                 mViewBinding.modeSwitchLayout.visibility = View.VISIBLE
@@ -434,7 +501,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
             }
 
             override fun onError(error: String?) {
-                ToastUtils.show(error ?: "未知异常")
+                ToastUtils.show(error ?: getString(R.string.toast_unknown_error))
                 mViewBinding.albumPreviewIv.cancelAnimation()
                 mViewBinding.albumPreviewIv.setNewImageFlag(false)
             }
@@ -448,15 +515,13 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
     }
 
     override fun onDestroyView() {
+        cancelAutoHide()
         super.onDestroyView()
         mMultiCameraDialog?.hide()
     }
 
     override fun onClick(v: View?) {
-//        if (! isCameraOpened()) {
-//            ToastUtils.show("camera not worked!")
-//            return
-//        }
+        scheduleAutoHide()
         clickAnimation(v!!, object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator) {
                 when (v) {
@@ -505,7 +570,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
     @SuppressLint("CheckResult")
     private fun showUsbDevicesDialog(usbDeviceList: MutableList<UsbDevice>?, curDevice: UsbDevice?) {
         if (usbDeviceList.isNullOrEmpty()) {
-            ToastUtils.show("Get usb device failed")
+            ToastUtils.show(R.string.toast_usb_device_failed)
             return
         }
         val list = arrayListOf<String>()
@@ -546,7 +611,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
                 override fun onEffectClick(effect: CameraEffect) {
                     mEffectDataList.find {it.id == effect.id}.also {
                         if (it == null) {
-                            ToastUtils.show("set effect failed!")
+                            ToastUtils.show(R.string.toast_set_effect_failed)
                             return@also
                         }
                         updateRenderEffect(it.classifyId, it.effect)
@@ -571,13 +636,13 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         val camera = getCurrentCamera() as? CameraUVC
         if (camera == null || !camera.isCameraOpened()) {
             Logger.w(TAG, "showResolutionDialog: camera not opened")
-            ToastUtils.show("Camera not opened yet")
+            ToastUtils.show(R.string.toast_camera_not_opened)
             return
         }
         getAllPreviewSizes().let { previewSizes ->
             if (previewSizes.isNullOrEmpty()) {
                 Logger.e(TAG, "Get camera preview size failed, camera opened but size list empty")
-                ToastUtils.show("Get camera preview size failed. See logcat (CameraUVC)")
+                ToastUtils.show(R.string.toast_preview_size_failed)
                 return
             }
             val list = arrayListOf<String>()
@@ -647,7 +712,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
                 startActivity(this)
             }
         } catch (e: Exception) {
-            ToastUtils.show("open error: ${e.localizedMessage}")
+            ToastUtils.show(getString(R.string.toast_open_failed, e.localizedMessage ?: ""))
         }
     }
 
@@ -742,39 +807,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
             tabTv.compoundDrawablePadding = 1
         }
         mViewBinding.captureBtn.setCaptureViewTheme(CaptureMediaView.CaptureViewTheme.THEME_WHITE)
-        val height = mViewBinding.controlPanelLayout.height
         mViewBinding.captureBtn.setCaptureMode(mCameraMode)
-        if (mCameraMode == CaptureMediaView.CaptureMode.MODE_CAPTURE_PIC) {
-            val translationX = ObjectAnimator.ofFloat(
-                mViewBinding.controlPanelLayout,
-                "translationY",
-                height.toFloat(),
-                0.0f
-            )
-            translationX.duration = 600
-            translationX.addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationStart(animation: Animator) {
-                    super.onAnimationStart(animation)
-                    mViewBinding.controlPanelLayout.visibility = View.VISIBLE
-                }
-            })
-            translationX.start()
-        } else {
-            val translationX = ObjectAnimator.ofFloat(
-                mViewBinding.controlPanelLayout,
-                "translationY",
-                0.0f,
-                height.toFloat()
-            )
-            translationX.duration = 600
-            translationX.addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    super.onAnimationEnd(animation)
-                    mViewBinding.controlPanelLayout.visibility = View.INVISIBLE
-                }
-            })
-            translationX.start()
-        }
     }
 
     private fun clickAnimation(v: View, listener: Animator.AnimatorListener) {
@@ -801,12 +834,12 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
             customView(view = binding.root, scrollable = false, noVerticalPadding = true)
             positiveButton(R.string.dialog_log_copy) {
                 val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText("AUSBC logs", logs))
+                clipboard.setPrimaryClip(ClipData.newPlainText("Medical Camera logs", logs))
                 ToastUtils.show(getString(R.string.dialog_log_copied))
             }
             negativeButton(R.string.dialog_log_clear) {
                 Logger.clearLogs()
-                ToastUtils.show("Logs cleared")
+                ToastUtils.show(R.string.dialog_log_cleared)
             }
         }
     }
@@ -919,5 +952,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         private const val TAG  = "DemoFragment"
         private const val WHAT_START_TIMER = 0x00
         private const val WHAT_STOP_TIMER = 0x01
+        private const val CONTROLS_AUTO_HIDE_MS = 4000L
+        private const val CONTROLS_FADE_MS = 250L
     }
 }

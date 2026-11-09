@@ -88,7 +88,7 @@ class DemoMultiCameraFragment : MultiCameraFragment(), ICameraStateCallBack {
         msg: String?
     ) {
         if (code == ICameraStateCallBack.State.ERROR) {
-            ToastUtils.show(msg ?: "open camera failed.")
+            ToastUtils.show(msg ?: getString(R.string.toast_open_camera_failed))
         }
         for ((position, cam) in mAdapter.data.withIndex()) {
             if (cam.getUsbDevice().deviceId == self.getUsbDevice().deviceId) {
@@ -115,11 +115,11 @@ class DemoMultiCameraFragment : MultiCameraFragment(), ICameraStateCallBack {
                         override fun onBegin() {}
 
                         override fun onError(error: String?) {
-                            ToastUtils.show(error ?: "capture image failed")
+                            ToastUtils.show(error ?: getString(R.string.toast_capture_image_failed))
                         }
 
                         override fun onComplete(path: String?) {
-                            ToastUtils.show(path ?: "capture image success")
+                            ToastUtils.show(path ?: getString(R.string.toast_capture_image_success))
                         }
                     })
                 }
@@ -135,12 +135,12 @@ class DemoMultiCameraFragment : MultiCameraFragment(), ICameraStateCallBack {
 
                         override fun onError(error: String?) {
                             mAdapter.notifyItemChanged(position, "video")
-                            ToastUtils.show(error ?: "capture video failed")
+                            ToastUtils.show(error ?: getString(R.string.toast_capture_video_failed))
                         }
 
                         override fun onComplete(path: String?) {
                             mAdapter.notifyItemChanged(position, "video")
-                            ToastUtils.show(path ?: "capture video success")
+                            ToastUtils.show(path ?: getString(R.string.toast_capture_video_success))
                         }
                     })
                 }

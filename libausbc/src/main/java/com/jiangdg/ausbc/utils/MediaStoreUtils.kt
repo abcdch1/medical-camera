@@ -87,9 +87,12 @@ object MediaStoreUtils {
             mimeType.startsWith("audio") -> Environment.DIRECTORY_MUSIC
             else -> Environment.DIRECTORY_PICTURES
         }
+        // Folder name inside Pictures/Movies/Music, e.g. "MedicalCamera"
+        val folderName = context.applicationInfo.loadLabel(context.packageManager)
+            .toString().replace(" ", "").ifEmpty { context.packageName }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             val storePath = Environment.getExternalStoragePublicDirectory(relativePath).absolutePath
-            val appDir = File(storePath, context.packageName).apply {
+            val appDir = File(storePath, folderName).apply {
                 if (!exists()) mkdirs()
             }
             val file = File(appDir, fileName)
@@ -103,7 +106,7 @@ object MediaStoreUtils {
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
             put(MediaStore.Images.Media.MIME_TYPE, mimeType)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, "${relativePath}/${context.packageName}")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "${relativePath}/${folderName}")
         }
         return context.contentResolver?.insert(contentUri, contentValues)!!
     }

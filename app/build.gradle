@@ -3,15 +3,19 @@ plugins {
     id 'kotlin-android'
 }
 
+base {
+    archivesName = "MedicalCamera-${rootProject.ext.appVersionName}"
+}
+
 android {
     namespace = "com.jiangdg.demo"
     compileSdkVersion rootProject.ext.versionCompiler
     defaultConfig {
-        applicationId "com.jiangdg.ausbc"
+        applicationId "vn.medicalcamera.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.versionTarget
-        versionCode rootProject.ext.versionCode
-        versionName rootProject.ext.versionNameString
+        versionCode rootProject.ext.appVersionCode
+        versionName rootProject.ext.appVersionName
         ndkVersion rootProject.ext.ndkVersion
 
         multiDexEnabled true
@@ -20,8 +24,26 @@ android {
             abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
     }
+    // Signing key comes from environment variables (set by GitHub Actions
+    // from the repository secrets KEYSTORE_BASE64 / KEYSTORE_PASSWORD).
+    // Without them the release APK falls back to the debug key.
+    def ksPath = System.getenv("SIGNING_KEYSTORE_PATH")
+    def hasReleaseKey = ksPath != null && file(ksPath).exists()
+    signingConfigs {
+        if (hasReleaseKey) {
+            medical {
+                storeFile file(ksPath)
+                storeType "pkcs12"
+                storePassword System.getenv("SIGNING_STORE_PASSWORD")
+                keyAlias "medicalcamera"
+                keyPassword System.getenv("SIGNING_STORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig hasReleaseKey ? signingConfigs.medical : signingConfigs.debug
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

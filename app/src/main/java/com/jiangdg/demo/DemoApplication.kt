@@ -34,8 +34,9 @@ class DemoApplication: BaseApplication() {
 
     override fun onCreate() {
         super.onCreate()
-        // init bugly library
-        CrashReport.initCrashReport(this, "9baa0e3fac", true)
+        // Bugly crash reporting is disabled: it sent crash data to the original
+        // author's Tencent Bugly account.
+        // CrashReport.initCrashReport(this, "9baa0e3fac", true)
         MMKVUtils.init(this)
     }
 }

@@ -18,7 +18,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:gravity="center"
-        android:text="NO UVC CAMERAS"
+        android:text="@string/no_uvc_cameras"
         android:textColor="@color/GRAY"
         android:textStyle="bold"
         android:textSize="28sp"
