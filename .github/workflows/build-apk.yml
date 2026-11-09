@@ -15,29 +15,43 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install SDK components
         run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager \
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
+          mkdir -p "$SDK"
+          SDKM=$(ls "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | sort | tail -1 || true)
+          if [ -z "$SDKM" ]; then
+            echo "Installing Android command-line tools into $SDK"
+            curl -sSL -o "$RUNNER_TEMP/clt.zip" https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
+            mkdir -p "$SDK/cmdline-tools"
+            unzip -q -o "$RUNNER_TEMP/clt.zip" -d "$SDK/cmdline-tools"
+            rm -rf "$SDK/cmdline-tools/latest"
+            mv "$SDK/cmdline-tools/cmdline-tools" "$SDK/cmdline-tools/latest"
+            SDKM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          echo "Using $SDKM"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          (yes | "$SDKM" --licenses > /dev/null) || true
+          "$SDKM" --install \
+            "platform-tools" \
             "platforms;android-36" \
             "build-tools;36.0.0" \
-            "ndk;28.1.13356709"
+            "ndk;28.1.13356709" > /dev/null
+          echo "sdk.dir=$SDK" > local.properties
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
