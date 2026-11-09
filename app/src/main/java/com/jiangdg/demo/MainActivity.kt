@@ -44,9 +44,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enterFullScreen()
         viewBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(viewBinding.root)
+        // Must run after setContentView(): the window's DecorView has to exist
+        // before its insets controller can be used (NPE on Android 16 otherwise).
+        enterFullScreen()
 //        replaceDemoFragment(DemoMultiCameraFragment())
         replaceDemoFragment(DemoFragment())
 //        replaceDemoFragment(GlSurfaceFragment())
@@ -160,7 +162,9 @@ class MainActivity : AppCompatActivity() {
     private fun hideSystemBars() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
-            window.insetsController?.let {
+            // Accessing decorView guarantees the DecorView is installed.
+            val decor = window.decorView
+            (decor.windowInsetsController ?: window.insetsController)?.let {
                 it.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
                 it.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
