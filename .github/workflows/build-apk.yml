@@ -3,6 +3,7 @@ name: Build Medical Camera APK
 on:
   push:
     branches: [main, master]
+    tags: ['v*']
   pull_request:
     branches: [main, master]
 
@@ -84,7 +85,7 @@ jobs:
           retention-days: 90
           if-no-files-found: error
 
-      - name: Create GitHub Release with APK
+      - name: Create GitHub pre-release with APK (every push to main)
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         uses: softprops/action-gh-release@v2
         with:
@@ -93,3 +94,14 @@ jobs:
           files: app/build/outputs/apk/release/*.apk
           prerelease: true
           generate_release_notes: true
+
+      - name: Create official GitHub Release (tag v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Medical Camera ${{ github.ref_name }}
+          body_path: docs/release-notes/${{ github.ref_name }}.md
+          files: app/build/outputs/apk/release/*.apk
+          prerelease: false
+          make_latest: true
