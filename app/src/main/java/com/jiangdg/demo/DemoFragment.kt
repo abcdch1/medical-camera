@@ -265,7 +265,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
 
                 override fun onDoubleTap(e: MotionEvent): Boolean {
                     if (mZoomScale > 1.01f) {
-                        resetZoom()
+                        resetDigitalZoom()
                     } else {
                         zoomAt(2f, e.x, e.y)
                     }
@@ -287,7 +287,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
             gestureDetector.onTouchEvent(event)
             true
         }
-        mViewBinding.zoomTv.setOnClickListener { resetZoom() }
+        mViewBinding.zoomTv.setOnClickListener { resetDigitalZoom() }
     }
 
     /** The view that shows the camera image (centered inside cameraViewContainer). */
@@ -315,7 +315,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         applyZoom()
     }
 
-    private fun resetZoom() {
+    private fun resetDigitalZoom() {
         mZoomScale = 1f
         mZoomTx = 0f
         mZoomTy = 0f
@@ -327,7 +327,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         val limit = mZoomScale - 1f
         mZoomTx = mZoomTx.coerceIn(-limit, limit)
         mZoomTy = mZoomTy.coerceIn(-limit, limit)
-        setZoom(mZoomScale, mZoomTx, mZoomTy)
+        setDigitalZoom(mZoomScale, mZoomTx, mZoomTy)
         if (mZoomScale > 1.01f) {
             mViewBinding.zoomTv.text = getString(R.string.zoom_level, mZoomScale)
             mViewBinding.zoomTv.visibility = View.VISIBLE
@@ -431,7 +431,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         mViewBinding.noCameraTv.visibility = View.VISIBLE
         mViewBinding.frameRateTv.visibility = View.GONE
         showControls()
-        resetZoom()
+        resetDigitalZoom()
         ToastUtils.show(R.string.toast_camera_closed)
     }
 
@@ -458,7 +458,7 @@ class DemoFragment : CameraFragment(), View.OnClickListener, CaptureMediaView.On
         ToastUtils.show(R.string.toast_camera_opened)
         showControls()
         // A new camera session starts without zoom.
-        resetZoom()
+        resetDigitalZoom()
     }
 
     private fun switchLayoutClick() {
